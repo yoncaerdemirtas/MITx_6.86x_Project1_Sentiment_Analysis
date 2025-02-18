@@ -3,13 +3,9 @@ import numpy as np
 import random
 
 
-
 #==============================================================================
 #===  PART I  =================================================================
 #==============================================================================
-
-
-
 def get_order(n_samples):
     try:
         with open(str(n_samples) + '.txt') as fp:
@@ -20,7 +16,6 @@ def get_order(n_samples):
         indices = list(range(n_samples))
         random.shuffle(indices)
         return indices
-
 
 
 def hinge_loss_single(feature_vector, label, theta, theta_0):
@@ -39,8 +34,11 @@ def hinge_loss_single(feature_vector, label, theta, theta_0):
         parameters.
     """
     # Your code here
-    raise NotImplementedError
-
+    agreement = label * (np.sum(np.array(theta) * np.array(feature_vector)) + theta_0)
+    if agreement >=1:
+        return 0
+    else:
+        return 1 - agreement
 
 
 def hinge_loss_full(feature_matrix, labels, theta, theta_0):
@@ -61,9 +59,15 @@ def hinge_loss_full(feature_matrix, labels, theta, theta_0):
     """
 
     # Your code here
-    raise NotImplementedError
-
-
+    n = len(feature_matrix)
+    h_loss = []
+    for i in range(n):
+        agreement = labels[i] * (np.sum(np.array(theta) * np.array(feature_matrix[i])) + theta_0)
+        if agreement >= 1:
+            h_loss.append(0)
+        else:
+            h_loss.append(1-agreement)
+    return np.average(h_loss)
 
 
 def perceptron_single_step_update(
@@ -310,7 +314,6 @@ def extract_words(text):
     return text.lower().split()
 
 
-
 def bag_of_words(texts, remove_stopword=False):
     """
     NOTE: feel free to change this code as guided by Section 3 (e.g. remove
@@ -336,7 +339,6 @@ def bag_of_words(texts, remove_stopword=False):
     return indices_by_word
 
 
-
 def extract_bow_feature_vectors(reviews, indices_by_word, binarize=True):
     """
     Args:
@@ -358,7 +360,6 @@ def extract_bow_feature_vectors(reviews, indices_by_word, binarize=True):
         # Your code here
         raise NotImplementedError
     return feature_matrix
-
 
 
 def accuracy(preds, targets):
