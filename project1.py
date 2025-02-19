@@ -1,3 +1,4 @@
+import math
 from string import punctuation, digits
 import numpy as np
 import random
@@ -201,9 +202,12 @@ def pegasos_single_step_update(
         completed.
     """
     # Your code here
-    raise NotImplementedError
-
-
+    if label * (np.sum(np.array(theta) * np.array(feature_vector)) + theta_0) <= 1:
+        theta = (1-eta*L) * theta + eta * label *np.array(feature_vector)
+        theta_0 = theta_0 + eta * label
+    else:
+        theta = (1-eta*L) * theta
+    return theta,theta_0
 
 def pegasos(feature_matrix, labels, T, L):
     """
@@ -233,7 +237,16 @@ def pegasos(feature_matrix, labels, T, L):
         after T iterations through the feature matrix.
     """
     # Your code here
-    raise NotImplementedError
+    nsamples = np.shape(feature_matrix)[0]
+    theta = np.zeros(np.shape(feature_matrix)[1])
+    theta_0 = 0
+    counter = 1
+    for t in range(T):
+        for i in get_order(nsamples):
+            eta = 1/counter**0.5
+            theta, theta_0 = pegasos_single_step_update(feature_matrix[i], labels[i], L, eta, theta, theta_0)
+            counter = counter + 1
+    return theta, theta_0
 
 
 
@@ -249,7 +262,6 @@ def pegasos(feature_matrix, labels, T, L):
 ##  def classify_vector(feature_vector, theta, theta_0):
 ##      return 2*np.heaviside(decision_function(feature_vector, theta, theta_0), 0)-1
 ##  #pragma: coderesponse end
-
 
 
 def classify(feature_matrix, theta, theta_0):
@@ -270,7 +282,14 @@ def classify(feature_matrix, theta, theta_0):
         should be considered a positive classification.
     """
     # Your code here
-    raise NotImplementedError
+    output = []
+    n = np.shape(feature_matrix)[0]
+    for i in range(n):
+        if np.sum(feature_matrix[i] * theta) + theta_0 > 0:
+            output.append(1)
+        else:
+            output.append(-1)
+    return np.array(output)
 
 
 def classifier_accuracy(
@@ -307,8 +326,12 @@ def classifier_accuracy(
         accuracy of the trained classifier on the validation data.
     """
     # Your code here
-    raise NotImplementedError
-
+    theta, theta_0 = classifier(train_feature_matrix, train_labels, **kwargs)
+    predictions_train = classify(train_feature_matrix, theta, theta_0)
+    predictions_val = classify(val_feature_matrix, theta, theta_0)
+    train_acc = accuracy(predictions_train, train_labels)
+    val_acc = accuracy(predictions_val, val_labels)
+    return train_acc, val_acc
 
 
 def extract_words(text):
@@ -321,14 +344,13 @@ def extract_words(text):
         count as their own words.
     """
     # Your code here
-    raise NotImplementedError
 
     for c in punctuation + digits:
         text = text.replace(c, ' ' + c + ' ')
     return text.lower().split()
 
 
-def bag_of_words(texts, remove_stopword=False):
+def bag_of_words(texts, stop_words=None):
     """
     NOTE: feel free to change this code as guided by Section 3 (e.g. remove
     stopwords, add bigrams etc.)
@@ -340,20 +362,19 @@ def bag_of_words(texts, remove_stopword=False):
         integer `index`.
     """
     # Your code here
-    raise NotImplementedError
-    
-    indices_by_word = {}  # maps word to unique index
+
+    #stop_words = set(stop_words or [])
+    stop_words = set(line.strip() for line in open('stopwords.txt'))
+    dictionary = {}  # maps word to unique index
     for text in texts:
         word_list = extract_words(text)
         for word in word_list:
-            if word in indices_by_word: continue
-            if word in stopword: continue
-            indices_by_word[word] = len(indices_by_word)
-
-    return indices_by_word
+            if word not in dictionary and word not in stop_words:
+                dictionary[word] = len(dictionary)
+    return dictionary
 
 
-def extract_bow_feature_vectors(reviews, indices_by_word, binarize=True):
+def extract_bow_feature_vectors(reviews, dictionary, binarize=False):
     """
     Args:
         `reviews` - a list of natural language strings
@@ -364,16 +385,20 @@ def extract_bow_feature_vectors(reviews, indices_by_word, binarize=True):
         in the dictionary.
     """
     # Your code here
-    feature_matrix = np.zeros([len(reviews), len(indices_by_word)], dtype=np.float64)
+    num_reviews = len(reviews)
+    feature_matrix = np.zeros([num_reviews, len(dictionary)])
+
     for i, text in enumerate(reviews):
         word_list = extract_words(text)
         for word in word_list:
-            if word not in indices_by_word: continue
-            feature_matrix[i, indices_by_word[word]] += 1
-    if binarize:
-        # Your code here
-        raise NotImplementedError
+            if word in dictionary:
+                if binarize:
+                    feature_matrix[i, dictionary[word]] = 1
+                else:
+                    feature_matrix[i, dictionary[word]] += 1
+
     return feature_matrix
+
 
 
 def accuracy(preds, targets):
